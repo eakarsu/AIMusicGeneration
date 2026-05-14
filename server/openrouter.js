@@ -3,7 +3,7 @@ require('dotenv').config({ path: '../.env' });
 
 async function queryOpenRouter(prompt, systemPrompt = 'You are an expert AI music assistant.') {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-4.5';
+  const model = process.env.OPENROUTER_MODEL || 'anthropic/claude-3-5-sonnet-20241022';
 
   if (!apiKey || apiKey === 'your-openrouter-api-key-here') {
     return {
@@ -110,4 +110,16 @@ function generateMockResponse(prompt) {
   return "🎵 **AI Music Assistant Response**\n\nI've analyzed your request and here are my suggestions:\n\n1. **Tempo:** 120 BPM in 4/4 time\n2. **Key:** C minor for emotional depth\n3. **Structure:** Verse-Chorus-Verse-Chorus-Bridge-Chorus\n4. **Instrumentation:** Start minimal, build layers\n5. **Production tip:** Use parallel compression for punch\n\nWould you like me to elaborate on any specific aspect?";
 }
 
-module.exports = { queryOpenRouter };
+function parseAIJson(text) {
+  if (!text) return null;
+  try {
+    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonMatch) return JSON.parse(jsonMatch[1].trim());
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start !== -1 && end !== -1) return JSON.parse(text.slice(start, end + 1));
+    return JSON.parse(text);
+  } catch { return null; }
+}
+
+module.exports = { queryOpenRouter, parseAIJson };

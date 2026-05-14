@@ -3,11 +3,16 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import FeaturePage from './pages/FeaturePage';
+import SongPipeline from './pages/SongPipeline';
+import AIGenerators from './pages/AIGenerators';
+import PublicComposition from './pages/PublicComposition';
 import Navbar from './components/Navbar';
 import './App.css';
 
 const FEATURES = [
   { key: 'compositions', label: 'Compositions', icon: '🎼', color: '#6C5CE7', apiPath: '/api/compositions', description: 'AI-powered music composition and arrangement' },
+  { key: 'song-pipeline', label: 'Song Pipeline', icon: '🚀', color: '#00b894', apiPath: null, description: 'Full AI song creation pipeline', isPipeline: true },
+  { key: 'ai-generators', label: 'AI Generators', icon: '🎚️', color: '#fd79a8', apiPath: null, description: 'Beat, chord, and lyric generators', isAIGenerators: true },
   { key: 'remixes', label: 'Remixes', icon: '🔄', color: '#00B894', apiPath: '/api/remixes', description: 'AI remix and rework concepts' },
   { key: 'sound-designs', label: 'Sound Design', icon: '🎛️', color: '#E17055', apiPath: '/api/sound-designs', description: 'AI synthesizer patch design' },
   { key: 'lyrics', label: 'Lyrics Generator', icon: '✍️', color: '#FDCB6E', apiPath: '/api/lyrics', description: 'AI songwriting and lyric generation' },
@@ -162,7 +167,14 @@ function App() {
   };
 
   if (!token) {
-    return <Login onLogin={handleLogin} />;
+    return (
+      <Router>
+        <Routes>
+          <Route path="/compositions/public/:token" element={<PublicComposition />} />
+          <Route path="*" element={<Login onLogin={handleLogin} />} />
+        </Routes>
+      </Router>
+    );
   }
 
   return (
@@ -171,8 +183,11 @@ function App() {
         <Navbar user={user} onLogout={handleLogout} features={FEATURES} />
         <main className="main-content">
           <Routes>
+            <Route path="/compositions/public/:token" element={<PublicComposition />} />
             <Route path="/" element={<Dashboard features={FEATURES} />} />
-            {FEATURES.map(f => (
+            <Route path="/song-pipeline" element={<SongPipeline token={token} />} />
+            <Route path="/ai-generators" element={<AIGenerators token={token} />} />
+            {FEATURES.filter(f => !f.isPipeline && !f.isAIGenerators).map(f => (
               <Route
                 key={f.key}
                 path={`/${f.key}`}

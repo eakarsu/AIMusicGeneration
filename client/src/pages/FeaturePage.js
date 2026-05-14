@@ -11,6 +11,10 @@ function FeaturePage({ feature, fields, token }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiOutput, setAiOutput] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+  const [shareInfo, setShareInfo] = useState(null);
+  const LIMIT = 20;
 
   const API = `http://localhost:3001${feature.apiPath}`;
   const headers = {
@@ -18,21 +22,27 @@ function FeaturePage({ feature, fields, token }) {
     'Authorization': `Bearer ${token}`,
   };
 
-  const fetchItems = useCallback(async () => {
+  const fetchItems = useCallback(async (p = page) => {
     setLoading(true);
     try {
-      const res = await fetch(API, { headers });
+      const res = await fetch(`${API}?page=${p}&limit=${LIMIT}`, { headers });
       const data = await res.json();
-      setItems(Array.isArray(data) ? data : []);
+      if (data.data) {
+        setItems(data.data);
+        setPagination({ total: data.total, totalPages: data.totalPages });
+      } else {
+        setItems(Array.isArray(data) ? data : []);
+      }
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
       setLoading(false);
     }
-  }, [API]);
+  }, [API, page]);
 
   useEffect(() => {
-    fetchItems();
+    fetchItems(1);
+    setPage(1);
     setShowDetail(false);
     setShowForm(false);
     setAiOutput(null);
@@ -134,6 +144,17 @@ function FeaturePage({ feature, fields, token }) {
     }
   };
 
+  const handleShare = async () => {
+    try {
+      const res = await fetch(`${API}/${selectedItem.id}/share`, { method: 'PUT', headers });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setShareInfo(data);
+    } catch (err) {
+      alert('Share failed: ' + err.message);
+    }
+  };
+
   const handleFormChange = (name, value) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -172,7 +193,7 @@ function FeaturePage({ feature, fields, token }) {
           <span className="feature-header-icon">{feature.icon}</span>
           <div>
             <h1 className="feature-title">{feature.label}</h1>
-            <div className="feature-count">{items.length} items</div>
+            <div className="feature-count">{pagination.total || items.length} items</div>
           </div>
         </div>
         <button className="btn-new" onClick={handleNew}>
@@ -227,9 +248,28 @@ function FeaturePage({ feature, fields, token }) {
         </div>
       )}
 
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 16 }}>
+          <button
+            className="btn-secondary"
+            style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid rgba(108,92,231,0.3)', background: 'rgba(108,92,231,0.08)', color: '#a29bfe', cursor: page <= 1 ? 'not-allowed' : 'pointer', opacity: page <= 1 ? 0.4 : 1 }}
+            onClick={() => { const p = page - 1; setPage(p); fetchItems(p); }}
+            disabled={page <= 1}
+          >← Prev</button>
+          <span style={{ color: '#a29bfe', fontSize: 14 }}>Page {page} of {pagination.totalPages}</span>
+          <button
+            className="btn-secondary"
+            style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid rgba(108,92,231,0.3)', background: 'rgba(108,92,231,0.08)', color: '#a29bfe', cursor: page >= pagination.totalPages ? 'not-allowed' : 'pointer', opacity: page >= pagination.totalPages ? 0.4 : 1 }}
+            onClick={() => { const p = page + 1; setPage(p); fetchItems(p); }}
+            disabled={page >= pagination.totalPages}
+          >Next →</button>
+        </div>
+      )}
+
       {/* Detail Modal */}
       {showDetail && selectedItem && (
-        <div className="modal-overlay" onClick={() => { setShowDetail(false); setAiOutput(null); }}>
+        <div className="modal-overlay" onClick={() => { setShowDetail(false); setAiOutput(null); setShareInfo(null); }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">{feature.icon} {selectedItem.title}</h2>
@@ -303,10 +343,27 @@ function FeaturePage({ feature, fields, token }) {
                 </div>
               )}
             </div>
+            {shareInfo && (
+              <div style={{ margin: '0 24px 16px', padding: 12, background: 'rgba(108,92,231,0.1)', borderRadius: 8, border: '1px solid rgba(108,92,231,0.3)' }}>
+                <div style={{ color: '#a29bfe', fontSize: 13, marginBottom: 6 }}>Shareable link:</div>
+                <div style={{ color: '#fff', fontSize: 12, wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                  {window.location.origin}/compositions/public/{shareInfo.share_token}
+                </div>
+                <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/compositions/public/${shareInfo.share_token}`)}
+                  style={{ marginTop: 8, padding: '4px 12px', borderRadius: 4, border: '1px solid rgba(108,92,231,0.3)', background: 'transparent', color: '#a29bfe', cursor: 'pointer', fontSize: 12 }}>
+                  Copy Link
+                </button>
+              </div>
+            )}
             <div className="modal-footer">
               <button className="btn-danger" onClick={handleDelete}>Delete</button>
+              {feature.key === 'compositions' && (
+                <button className="btn-secondary" onClick={handleShare} style={{ background: 'rgba(0,184,148,0.15)', borderColor: 'rgba(0,184,148,0.4)', color: '#00b894' }}>
+                  Share
+                </button>
+              )}
               <button className="btn-secondary" onClick={handleEdit}>Edit</button>
-              <button className="btn-secondary" onClick={() => { setShowDetail(false); setAiOutput(null); }}>Close</button>
+              <button className="btn-secondary" onClick={() => { setShowDetail(false); setAiOutput(null); setShareInfo(null); }}>Close</button>
             </div>
           </div>
         </div>
