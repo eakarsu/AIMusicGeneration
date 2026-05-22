@@ -9,6 +9,9 @@ import PublicComposition from './pages/PublicComposition';
 import Navbar from './components/Navbar';
 import './App.css';
 
+import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
+import CodexOperationsFeature from './pages/CodexOperationsFeature';
+
 const FEATURES = [
   { key: 'compositions', label: 'Compositions', icon: '🎼', color: '#6C5CE7', apiPath: '/api/compositions', description: 'AI-powered music composition and arrangement' },
   { key: 'song-pipeline', label: 'Song Pipeline', icon: '🚀', color: '#00b894', apiPath: null, description: 'Full AI song creation pipeline', isPipeline: true },
@@ -170,6 +173,9 @@ function App() {
     return (
       <Router>
         <Routes>
+        <Route path="/codex/custom-viz" element={<CodexCustomVizFeature />} />
+        <Route path="/codex/operations" element={<CodexOperationsFeature />} />
+
           <Route path="/compositions/public/:token" element={<PublicComposition />} />
           <Route path="*" element={<Login onLogin={handleLogin} />} />
         </Routes>
