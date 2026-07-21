@@ -1,0 +1,16 @@
+name: ci
+on: [push, pull_request]
+permissions: {contents: read}
+jobs:
+  governed-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - run: node --test server/test/*.test.js
+      - run: node --check server/domain/musicPolicy.js
+      - run: node --check server/routes/governedCreation.js
+      - run: node --check server/services/providerBoundary.js
+      - run: node --check server/index.js
+      - run: bash -n start.sh scripts/bootstrap.sh scripts/migrate.sh scripts/seed-development.sh

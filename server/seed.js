@@ -1,4 +1,6 @@
 const { Pool } = require('pg');
+const fs = require('node:fs');
+const path = require('node:path');
 require('dotenv').config({ path: '../.env' });
 
 const pool = new Pool({
@@ -445,6 +447,25 @@ async function seed() {
       ('Reggaeton Mix', 'Single', 18, 'Reggaeton', '-10 LUFS', 'Heavy 808 sub, vocal bright 5kHz, dembow sharp', 'Heavy compression, 808 sidechain', 'Mono low end, vocal center, effects wide', 'EQ → Multiband → Soft Clip → Limiter', 'Punchy reggaeton mix for streaming and clubs', 'published'),
       ('Ambient Soundscape', 'Album', 12, 'Ambient', '-20 LUFS', 'Gentle sculpting, preserve natural frequency balance', 'Barely any compression, preserve all dynamics', 'Ultra-wide stereo, immersive spatial placement', 'Gentle EQ → Limiter (-4dB ceiling)', 'Spacious ambient mix preserving full dynamic range', 'draft');
     `);
+
+    const governedMigration = fs.readFileSync(
+      path.join(__dirname, 'migrations', '001_governed_music_creation.sql'),
+      'utf8'
+    );
+    await client.query(governedMigration);
+    const tenant = await client.query(
+      `INSERT INTO organizations(name) VALUES('AI Music Generation') RETURNING id`
+    );
+    const administrator = await client.query(
+      `UPDATE users SET tenant_id=$1 WHERE email='admin@aimusic.com' RETURNING id`,
+      [tenant.rows[0].id]
+    );
+    await client.query(
+      `INSERT INTO tenant_memberships(tenant_id,user_id,role,active)
+       VALUES($1,$2,'admin',TRUE)
+       ON CONFLICT(tenant_id,user_id) DO UPDATE SET role='admin',active=TRUE`,
+      [tenant.rows[0].id, administrator.rows[0].id]
+    );
 
     console.log('✅ Database seeded successfully with all 15 items per feature!');
     console.log('📊 Tables created: users, compositions, remixes, sound_designs, lyrics, chord_progressions, melodies, beat_patterns, genre_fusions, music_analysis, mixing_assistant');
