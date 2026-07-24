@@ -16,7 +16,7 @@ function FeaturePage({ feature, fields, token }) {
   const [shareInfo, setShareInfo] = useState(null);
   const LIMIT = 20;
 
-  const API = `http://localhost:3001${feature.apiPath}`;
+  const API = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}${feature.apiPath}`;
   const headers = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`,

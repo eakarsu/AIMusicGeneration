@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
-const API = 'http://localhost:3001';
+const API = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 export default function PublicComposition() {
   const { token } = useParams();

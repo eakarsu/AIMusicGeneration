@@ -1,19 +1,16 @@
 const https = require('https');
-require('dotenv').config({ path: '../.env' });
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 async function queryOpenRouter(prompt, systemPrompt = 'You are an expert AI music assistant.') {
   const apiKey = process.env.OPENROUTER_API_KEY;
   const model = process.env.OPENROUTER_MODEL || 'anthropic/claude-3-5-sonnet-20241022';
 
   if (!apiKey || apiKey === 'your-openrouter-api-key-here') {
-    return {
-      success: false,
-      error: 'OpenRouter API key not configured. Please set OPENROUTER_API_KEY in .env file.',
-      model: model,
-      mock: true,
-      result: generateMockResponse(prompt)
-    };
+    throw new Error('OpenRouter API key is not configured');
   }
+
+  const baseUrl = new URL(process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1');
 
   const data = JSON.stringify({
     model: model,
@@ -27,8 +24,9 @@ async function queryOpenRouter(prompt, systemPrompt = 'You are an expert AI musi
 
   return new Promise((resolve, reject) => {
     const options = {
-      hostname: 'openrouter.ai',
-      path: '/api/v1/chat/completions',
+      hostname: baseUrl.hostname,
+      port: baseUrl.port || 443,
+      path: `${baseUrl.pathname.replace(/\/$/, '')}/chat/completions`,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -44,7 +42,7 @@ async function queryOpenRouter(prompt, systemPrompt = 'You are an expert AI musi
       res.on('end', () => {
         try {
           const parsed = JSON.parse(body);
-          if (parsed.error) {
+          if (res.statusCode < 200 || res.statusCode >= 300 || parsed.error) {
             resolve({
               success: false,
               error: parsed.error.message || 'OpenRouter API error',
@@ -52,10 +50,14 @@ async function queryOpenRouter(prompt, systemPrompt = 'You are an expert AI musi
               raw: parsed
             });
           } else {
+            const content = parsed.choices?.[0]?.message?.content;
+            if (!content) {
+              return resolve({ success: false, error: 'OpenRouter returned no message content', raw: parsed });
+            }
             resolve({
               success: true,
               model: model,
-              result: parsed.choices[0].message.content,
+              result: content,
               usage: parsed.usage,
               id: parsed.id
             });

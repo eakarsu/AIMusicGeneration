@@ -3,12 +3,23 @@ const fs = require('node:fs');
 const path = require('node:path');
 require('dotenv').config({ path: '../.env' });
 
+if (process.env.NODE_ENV === 'production' || process.env.ALLOW_DEMO_SEED !== 'true') {
+  throw new Error('Demo seed requires ALLOW_DEMO_SEED=true outside production');
+}
+const seedPassword = process.env.DEMO_SEED_PASSWORD || process.env.SEED_DEMO_PASSWORD || '';
+const seedEmail = process.env.DEMO_EMAIL || 'runtime-admin@example.com';
+const seedName = process.env.DEMO_ADMIN_NAME || 'RuntimeAdmin';
+if (seedPassword.length < 12) {
+  throw new Error('DEMO_SEED_PASSWORD must contain at least 12 characters');
+}
+
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'ai_music_generation',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
+  connectionString: process.env.DATABASE_URL || undefined,
+  host: process.env.DATABASE_URL ? undefined : (process.env.DB_HOST || 'localhost'),
+  port: process.env.DATABASE_URL ? undefined : (process.env.DB_PORT || 5432),
+  database: process.env.DATABASE_URL ? undefined : (process.env.DB_NAME || 'ai_music_generation'),
+  user: process.env.DATABASE_URL ? undefined : (process.env.DB_USER || 'postgres'),
+  password: process.env.DATABASE_URL ? undefined : (process.env.DB_PASSWORD || 'postgres'),
 });
 
 async function seed() {
@@ -240,13 +251,13 @@ async function seed() {
       );
     `);
 
-    // Insert default user (password: password123)
+    // Insert the explicitly configured local verification user.
     const bcrypt = require('bcryptjs');
-    const hashedPassword = await bcrypt.hash('password123', 10);
+    const hashedPassword = await bcrypt.hash(seedPassword, 10);
     await client.query(`
       INSERT INTO users (email, password, name) VALUES
-      ('admin@aimusic.com', $1, 'Music Producer');
-    `, [hashedPassword]);
+      ($1, $2, $3);
+    `, [seedEmail, hashedPassword, seedName]);
 
     // Seed Compositions (15 items)
     await client.query(`
@@ -457,8 +468,8 @@ async function seed() {
       `INSERT INTO organizations(name) VALUES('AI Music Generation') RETURNING id`
     );
     const administrator = await client.query(
-      `UPDATE users SET tenant_id=$1 WHERE email='admin@aimusic.com' RETURNING id`,
-      [tenant.rows[0].id]
+      `UPDATE users SET tenant_id=$1 WHERE LOWER(email)=LOWER($2) RETURNING id`,
+      [tenant.rows[0].id, seedEmail]
     );
     await client.query(
       `INSERT INTO tenant_memberships(tenant_id,user_id,role,active)
@@ -469,7 +480,7 @@ async function seed() {
 
     console.log('✅ Database seeded successfully with all 15 items per feature!');
     console.log('📊 Tables created: users, compositions, remixes, sound_designs, lyrics, chord_progressions, melodies, beat_patterns, genre_fusions, music_analysis, mixing_assistant');
-    console.log('👤 Default user: admin@aimusic.com / password123');
+    console.log(`👤 Verification user: ${seedEmail}`);
 
   } catch (err) {
     console.error('❌ Seed error:', err.message);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const API = 'http://localhost:3001';
+const API = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 const TABS = [
   { key: 'beat', label: 'Beat', icon: '🥁', endpoint: '/api/ai/generate-beat' },
