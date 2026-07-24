@@ -9,8 +9,8 @@ function Login({ onLogin }) {
   const [loading, setLoading] = useState(false);
 
   const handleAutoFill = () => {
-    setEmail('admin@aimusic.com');
-    setPassword('password123');
+    setEmail(process.env.REACT_APP_DEMO_EMAIL || '');
+    setPassword(process.env.REACT_APP_DEMO_PASSWORD || '');
     setError('');
   };
 
