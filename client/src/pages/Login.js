@@ -75,8 +75,8 @@ function Login({ onLogin }) {
           </button>
         </form>
 
-        <button className="autofill-btn" onClick={handleAutoFill} style={{ width: '100%', marginTop: '12px' }}>
-          ⚡ Auto-fill Demo Credentials
+        <button type="button" className="autofill-btn" onClick={handleAutoFill} style={{ width: '100%', marginTop: '12px' }}>
+          Auto Fill Demo Credentials
         </button>
       </div>
     </div>
