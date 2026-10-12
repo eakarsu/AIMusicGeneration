@@ -1,37 +1,13 @@
 import React, { useState } from 'react';
+import AIReport from '../components/AIReport';
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
-function Section({ title, content, icon }) {
-  const [open, setOpen] = useState(true);
-  if (!content) return null;
-  return (
-    <div style={{
-      background: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(108,92,231,0.2)',
-      borderRadius: 12,
-      marginBottom: 16,
-      overflow: 'hidden'
-    }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 20px', background: 'transparent', border: 'none', cursor: 'pointer',
-          color: '#fff', fontSize: 16, fontWeight: 600
-        }}
-      >
-        <span>{icon} {title}</span>
-        <span style={{ color: '#a29bfe', fontSize: 18 }}>{open ? '▲' : '▼'}</span>
-      </button>
-      {open && (
-        <div style={{ padding: '0 20px 20px', color: '#ccc', lineHeight: 1.7, whiteSpace: 'pre-wrap', fontSize: 14 }}>
-          {content}
-        </div>
-      )}
-    </div>
-  );
-}
+const songExamples = [
+  { label: 'City nights', theme: 'Finding a way home after a late shift in a changing city', genre: 'Electronic', mood: 'Hopeful', tempo: 108 },
+  { label: 'Summer reunion', theme: 'Two old friends reconnect at a summer gathering', genre: 'Pop', mood: 'Uplifting', tempo: 122 },
+  { label: 'Quiet resolve', theme: 'Starting over after a difficult year with patience and resolve', genre: 'Folk', mood: 'Peaceful', tempo: 84 },
+];
 
 export default function SongPipeline({ token }) {
   const [form, setForm] = useState({ theme: '', genre: 'Pop', mood: 'Uplifting', tempo: 120 });
@@ -92,6 +68,9 @@ export default function SongPipeline({ token }) {
         marginBottom: 24
       }}>
         <form onSubmit={handleSubmit}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+            {songExamples.map(({ label, ...values }) => <button key={label} type="button" className="btn-secondary" disabled={loading} onClick={() => { setForm(values); setError(''); }}>{label}</button>)}
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
             <div style={{ gridColumn: '1 / -1' }}>
               <label className="form-label">Song Theme / Concept *</label>
@@ -138,33 +117,7 @@ export default function SongPipeline({ token }) {
         </form>
       </div>
 
-      {result && (
-        <div>
-          <h2 style={{ color: '#a29bfe', marginBottom: 16, fontSize: 18 }}>Your Song Blueprint</h2>
-          <Section title="Lyrics Concept" content={result.lyrics_concept} icon="✍️" />
-          <Section title="Chord Progression" content={result.chord_progression} icon="🎹" />
-          <Section title="Melody Description" content={result.melody_description} icon="🎵" />
-          <Section title="Arrangement & Production" content={result.arrangement_notes} icon="🎛️" />
-          <div style={{
-            background: 'rgba(108,92,231,0.05)',
-            border: '1px solid rgba(108,92,231,0.3)',
-            borderRadius: 12,
-            padding: 20,
-            marginTop: 8
-          }}>
-            <h3 style={{ color: '#a29bfe', marginBottom: 12, fontSize: 16 }}>Complete Song Brief</h3>
-            <pre style={{ color: '#ccc', fontSize: 12, lineHeight: 1.6, whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
-              {result.complete_song_brief}
-            </pre>
-            <button
-              onClick={() => navigator.clipboard.writeText(result.complete_song_brief)}
-              style={{ marginTop: 12, padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(108,92,231,0.3)', background: 'rgba(108,92,231,0.1)', color: '#a29bfe', cursor: 'pointer', fontSize: 13 }}
-            >
-              Copy Brief
-            </button>
-          </div>
-        </div>
-      )}
+      {result && <AIReport response={result} title="Your Song Blueprint" />}
     </div>
   );
 }

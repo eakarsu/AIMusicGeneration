@@ -44,6 +44,14 @@ app.use('/api/music-analysis', require('./routes/musicAnalysis'));
 app.use('/api/mixing-assistant', require('./routes/mixingAssistant'));
 app.use('/api/ai', require('./routes/songPipeline'));
 app.use('/api/governed-creation', require('./routes/governedCreation')(authenticateToken));
+
+// Advisory AI reports only; native execution and approval routes stay unchanged.
+const aiWorkspaceSupport = require("./aiWorkspaceAdapters.cjs");
+const aiWorkspaceDatabase = require("./db.js");
+app.use('/api/report-workspace', require("./aiWorkspace.cjs").createAIWorkspaceRouter({
+  pool: aiWorkspaceDatabase, authenticateToken: require("./middleware/auth.js").authenticateToken,
+  aiRateLimiter: aiWorkspaceSupport.createWorkspaceLimiter(), features: require("./aiWorkspaceFeatures.json"),
+}));
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
 
 const port = Number(process.env.SERVER_PORT || 3001);

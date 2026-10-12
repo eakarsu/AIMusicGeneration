@@ -1,4 +1,34 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import AIReport from '../components/AIReport';
+
+const musicExamples = [
+  { title: 'Midnight Transit', genre: 'Electronic', mood: 'Reflective', key: 'A minor', tempo: 108, description: 'A restrained night drive concept with a warm synth lead and a gradual build.' },
+  { title: 'Open Window', genre: 'Pop', mood: 'Hopeful', key: 'C major', tempo: 122, description: 'A bright reunion song with a clear chorus hook and live percussion.' },
+  { title: 'After the Rain', genre: 'Folk', mood: 'Peaceful', key: 'G major', tempo: 84, description: 'An acoustic arrangement about starting over, with intimate vocals and a gentle ending.' },
+];
+
+function exampleFields(fields, current, index) {
+  const example = musicExamples[index];
+  return Object.fromEntries(fields.map((field) => {
+    const key = field.name;
+    if (/(?:^|_)(?:id|reference|file|upload)(?:$|_)/i.test(key)) return [key, current[key]];
+    if (field.type === 'select') return [key, field.options?.[index % field.options.length] ?? current[key]];
+    if (field.type === 'checkbox') return [key, index !== 1];
+    if (field.type === 'number') return [key, /(?:tempo|bpm)/i.test(key) ? example.tempo : /(?:count|bars|verse)/i.test(key) ? [4, 8, 6][index] : [20, 35, 50][index]];
+    if (key === 'title') return [key, example.title];
+    if (/genre/i.test(key)) return [key, example.genre];
+    if (/mood/i.test(key)) return [key, example.mood];
+    if (/key_signature|target_key/i.test(key)) return [key, example.key];
+    if (/track_name/i.test(key)) return [key, `${example.title} demo`];
+    if (/artist/i.test(key)) return [key, 'Independent studio artist'];
+    if (/time_signature/i.test(key)) return [key, '4/4'];
+    if (/range_low/i.test(key)) return [key, 'A3'];
+    if (/range_high/i.test(key)) return [key, 'E5'];
+    if (/language/i.test(key)) return [key, 'English'];
+    if (/status/i.test(key)) return [key, current[key] || 'draft'];
+    return [key, `${example.description} ${field.label}: review this draft detail before generating.`];
+  }));
+}
 
 function FeaturePage({ feature, fields, token }) {
   const [items, setItems] = useState([]);
@@ -159,22 +189,6 @@ function FeaturePage({ feature, fields, token }) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const formatAiContent = (text) => {
-    if (!text) return '';
-    // Convert markdown-like formatting to styled HTML
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/^### (.*$)/gm, '<h3 style="color:#a29bfe;margin:16px 0 8px;font-size:16px;">$1</h3>')
-      .replace(/^## (.*$)/gm, '<h2 style="color:#a29bfe;margin:20px 0 10px;font-size:18px;">$1</h2>')
-      .replace(/^# (.*$)/gm, '<h1 style="color:#fff;margin:24px 0 12px;font-size:22px;">$1</h1>')
-      .replace(/^- (.*$)/gm, '<div style="padding:2px 0 2px 16px;border-left:2px solid rgba(108,92,231,0.3);">$1</div>')
-      .replace(/^\d+\. (.*$)/gm, '<div style="padding:2px 0 2px 16px;color:#d0d0d0;">$&</div>')
-      .replace(/`(.*?)`/g, '<code style="background:rgba(108,92,231,0.15);padding:2px 8px;border-radius:4px;font-size:13px;color:#a29bfe;">$1</code>')
-      .replace(/\|(.*?)\|/g, '<span style="background:rgba(255,255,255,0.04);padding:4px 8px;border-radius:4px;font-family:monospace;">|$1|</span>')
-      .replace(/\n/g, '<br/>');
-  };
-
   const getDisplayColumns = () => {
     const always = ['title'];
     const extra = fields
@@ -327,12 +341,7 @@ function FeaturePage({ feature, fields, token }) {
                       <span style={{ color: '#e74c3c', fontSize: 12 }}>⚠ {aiOutput.error}</span>
                     )}
                   </div>
-                  <div className="ai-output-body">
-                    <div
-                      className="ai-output-content"
-                      dangerouslySetInnerHTML={{ __html: formatAiContent(aiOutput.result || aiOutput.error || 'No response') }}
-                    />
-                  </div>
+                  <AIReport response={aiOutput.success === false ? { error: aiOutput.error } : aiOutput} title={`${feature.label} AI report`} />
                   {aiOutput.usage && (
                     <div className="ai-output-meta">
                       <span>Prompt tokens: {aiOutput.usage.prompt_tokens}</span>
@@ -379,6 +388,9 @@ function FeaturePage({ feature, fields, token }) {
             </div>
             <form onSubmit={handleSave}>
               <div className="modal-body">
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                  {musicExamples.map((example, index) => <button key={example.title} type="button" className="btn-secondary" disabled={saving || aiLoading} onClick={() => { setFormData(current => exampleFields(fields, current, index)); setAiOutput(null); }}>Fill {example.title} example</button>)}
+                </div>
                 <div className="form-grid">
                   {fields.map(f => (
                     <div key={f.name} className={`form-group ${f.type === 'textarea' ? 'full-width' : ''}`}>
@@ -451,12 +463,7 @@ function FeaturePage({ feature, fields, token }) {
                         {aiOutput.model || 'OpenRouter'} {aiOutput.mock ? '(Demo Mode)' : ''}
                       </span>
                     </div>
-                    <div className="ai-output-body">
-                      <div
-                        className="ai-output-content"
-                        dangerouslySetInnerHTML={{ __html: formatAiContent(aiOutput.result || aiOutput.error || 'No response') }}
-                      />
-                    </div>
+                    <AIReport response={aiOutput.success === false ? { error: aiOutput.error } : aiOutput} title={`${feature.label} AI report`} />
                     {aiOutput.usage && (
                       <div className="ai-output-meta">
                         <span>Prompt tokens: {aiOutput.usage.prompt_tokens}</span>
