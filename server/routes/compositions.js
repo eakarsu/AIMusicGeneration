@@ -19,11 +19,17 @@ router.get('/', authenticateToken, async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(100, parseInt(req.query.limit) || 20);
     const offset = (page - 1) * limit;
-    const countResult = await pool.query('SELECT COUNT(*) FROM compositions WHERE user_id = $1', [req.user.id]);
+    const q = String(req.query.q || req.query.search || '').trim();
+    const clauses = ['user_id = $1']; const params = [req.user.id];
+    if (q) { params.push(`%${q}%`); clauses.push(`(title ILIKE $${params.length} OR genre ILIKE $${params.length} OR mood ILIKE $${params.length})`); }
+    if (req.query.status) { params.push(req.query.status); clauses.push(`status = $${params.length}`); }
+    if (req.query.genre) { params.push(req.query.genre); clauses.push(`genre = $${params.length}`); }
+    const where = clauses.join(' AND ');
+    const countResult = await pool.query(`SELECT COUNT(*) FROM compositions WHERE ${where}`, params);
     const total = parseInt(countResult.rows[0].count);
     const result = await pool.query(
-      'SELECT * FROM compositions WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
-      [req.user.id, limit, offset]
+      `SELECT * FROM compositions WHERE ${where} ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
     );
     res.json({ data: result.rows, page, limit, total, totalPages: Math.ceil(total / limit) });
   } catch (err) { res.status(500).json({ error: err.message }); }
